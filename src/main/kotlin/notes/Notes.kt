@@ -16,20 +16,71 @@ object Notes {
         text: String,
         privacy: Int = 3,
         commentPrivacy: Int = 3,
+        userId: UInt,
         privacyView: String = "nobody",
         privacyComment: String = "nobody"
     ): Int {
-        notes[noteCounter++] = Note(title, text, privacy, commentPrivacy, privacyView, privacyComment)
+        notes[++noteCounter] = Note(title, text, userId, privacy, commentPrivacy, privacyView, privacyComment)
         return noteCounter
     }
 
+    fun get(
+        noteIds: Set<Int>? = null,
+        userId: UInt? = null,
+        offset: Int = 0,
+        count: Int = 0
+    ): List<Note> {
+        val result = arrayListOf<Note>()
+        val keys = noteIds ?: notes.keys
+        var counter = 0
+
+        for (i in keys) {
+            val note = notes[i] ?: continue
+
+            if ((userId != null) && (note.userId != userId)) continue
+            if (counter++ < offset) continue
+
+            result.add(note)
+            if ((count > 0) && (result.size >= counter)) break
+        }
+
+        if (result.isEmpty())
+            throw NotesNotFoundException()
+
+        return result
+    }
+
+    fun getComments(
+        noteId: Int,
+        ownerId: UInt? = null,
+        offset: Int = 0,
+        count: Int = 0
+    ): List<Comment> {
+        val result = arrayListOf<Comment>()
+        var counter = 0
+
+        for (comment in comments) {
+            if (comment.noteId != noteId) continue
+            if ((ownerId != null) && (comment.ownerId != ownerId)) continue
+            if (counter++ < offset) continue
+
+            result.add(comment)
+            if ((count > 0) && (result.size >= counter)) break
+        }
+
+        if (result.isEmpty())
+            throw CommentsNotFoundException()
+
+        return result
+    }
+
     fun delete(noteId: Int) {
-        if (notes.remove(noteId - 1) == null)
+        if (notes.remove(noteId) == null)
             throw NoteNotFoundException(noteId)
     }
 
     fun getById(noteId: Int): Note {
-        return notes[noteId - 1] ?: throw NoteNotFoundException(noteId)
+        return notes[noteId] ?: throw NoteNotFoundException(noteId)
     }
 
     fun edit(
@@ -50,11 +101,8 @@ object Notes {
         note.privacyComment = privacyComment ?: note.privacyComment
     }
 
-    private fun getCommentByIdAndOwner(commentId: Int, ownerId: Int): Comment {
-        var comment = if (comments.size >= commentId) comments[commentId - 1] else null
-
-        if (comment == null)
-            throw CommentNotFoundException(commentId)
+    private fun getCommentByIdAndOwner(commentId: Int, ownerId: UInt): Comment {
+        val comment = if ((commentId > 0) && (comments.size >= commentId)) comments[commentId - 1] else throw CommentNotFoundException(commentId)
 
         if (comment.ownerId != ownerId)
             throw CommentWrongOwnerException(commentId)
@@ -64,12 +112,12 @@ object Notes {
 
     fun createComment(
         noteId: Int,
-        ownerId: Int,
+        ownerId: UInt,
         message: String,
         guid: String,
-        replyTo: Int? = null
+        replyTo: UInt? = null
     ): Int {
-        val note = getById(noteId)
+        getById(noteId)
         comments.add(
             Comment(
                 noteId = noteId,
@@ -79,14 +127,14 @@ object Notes {
                 guid = guid
             )
         )
-        return comments.size;
+        return comments.size
     }
 
     fun deleteComment(
         commentId: Int,
-        ownerId: Int
+        ownerId: UInt
     ) {
-        var comment = getCommentByIdAndOwner(commentId, ownerId)
+        val comment = getCommentByIdAndOwner(commentId, ownerId)
 
         if (comment.isDeleted)
             throw CommentNotFoundException(commentId)
@@ -96,11 +144,11 @@ object Notes {
 
     fun restoreComment(
         commentId: Int,
-        ownerId: Int
+        ownerId: UInt
     ) {
-        var comment = getCommentByIdAndOwner(commentId, ownerId)
+        val comment = getCommentByIdAndOwner(commentId, ownerId)
 
-        if ((comment == null) || !comment.isDeleted)
+        if (!comment.isDeleted)
             throw CommentNotFoundException(commentId)
 
         comment.isDeleted = false
@@ -108,10 +156,10 @@ object Notes {
 
     fun editComment(
         commentId: Int,
-        ownerId: Int,
+        ownerId: UInt,
         message: String
     ) {
-        var comment = getCommentByIdAndOwner(commentId, ownerId)
+        val comment = getCommentByIdAndOwner(commentId, ownerId)
 
         if (comment.isDeleted)
             throw CommentNotFoundException(commentId)
