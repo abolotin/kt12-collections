@@ -32,16 +32,16 @@ object Notes {
     ): List<Note> {
         val result = arrayListOf<Note>()
         val keys = noteIds ?: notes.keys
-        var counter = 0
+        var recordsCounter = 0
 
         for (i in keys) {
             val note = notes[i] ?: continue
 
             if ((userId != null) && (note.userId != userId)) continue
-            if (counter++ < offset) continue
+            if (recordsCounter++ < offset) continue
 
             result.add(note)
-            if ((count > 0) && (result.size >= counter)) break
+            if ((count > 0) && (result.size >= count)) break
         }
 
         if (result.isEmpty())
