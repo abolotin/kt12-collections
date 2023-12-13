@@ -57,15 +57,15 @@ object Notes {
         count: Int = 0
     ): List<Comment> {
         val result = arrayListOf<Comment>()
-        var counter = 0
+        var recordsCounter = 0
 
         for (comment in comments) {
             if (comment.noteId != noteId) continue
             if ((ownerId != null) && (comment.ownerId != ownerId)) continue
-            if (counter++ < offset) continue
+            if (recordsCounter++ < offset) continue
 
             result.add(comment)
-            if ((count > 0) && (result.size >= counter)) break
+            if ((count > 0) && (result.size >= count)) break
         }
 
         if (result.isEmpty())
